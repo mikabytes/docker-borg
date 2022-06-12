@@ -1,3 +1,3 @@
 #! /bin/bash
 
-docker build $PARAMS -t secoresearch/rsync:latest .
+docker build $PARAMS -t mikabytes/docker-borg:latest .

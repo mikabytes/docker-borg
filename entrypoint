@@ -1,76 +1,46 @@
 #!/bin/bash
 
+set -e
 
-################################
-# ADD USER TO PASSWD IF NEEDED #
-################################
+# As we are probably not interactive, let's set some healthy defaults
+export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=${BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK:-"yes"}
+export BORG_RELOCATED_REPO_ACCESS_IS_OK=${BORG_RELOCATED_REPO_ACCESS_IS_OK:-"yes"}
+export BORG_CHECK_I_KNOW_WHAT_I_AM_DOING=${BORG_CHECK_I_KNOW_WHAT_I_AM_DOING:-"no"}
+export BORG_DELETE_I_KNOW_WHAT_I_AM_DOING=${BORG_DELETE_I_KNOW_WHAT_I_AM_DOING:-"no"}
 
-set -euo pipefail
-if [ -n "${DEBUG:-}" ]; then
-    set -x
-fi
-
-if ! whoami &> /dev/null; then
-    echo "${USER_NAME:-default}:x:$(id -u):0:${USER_NAME:-default} user:${HOME}:/sbin/nologin" >> /etc/passwd
-fi
+TARGET_NO_ARCHIVE=`echo "$TARGET" | sed 's/::.*$//'`
 
 whoami
 
+trap 'echo $( date ) Backup interrupted >&2; exit 2' INT TERM
 
-#########################
-# CONSTRUCT SSH COMMAND #
-#########################
+echo "$SSH_PRIVATE_KEY" > /root/.ssh/id_rsa
+echo "$SSH_KNOWN_HOSTS" > /root/.ssh/known_hosts
 
-SSH_PRIVATE_KEY_FILE="${SSH_PRIVATE_KEY_FILE:-/secrets/private_key}"
-SSH_KNOWN_HOSTS_FILE="${SSH_KNOWN_HOSTS_FILE:-/config/known_hosts}"
-SSH_COMMAND="ssh"
+chmod 600 /root/.ssh/id_rsa
+chmod 600 /root/.ssh/known_hosts
 
-ssh_private_key() {
-    echo "$1" > /tmp/key
-    chown "$(id -u)" "/tmp/key"
-    chmod 600 /tmp/key
-    SSH_COMMAND=$(printf "%s -i %q" "$SSH_COMMAND" "/tmp/key")
-}
+info() { printf "\n=== %s %s ===\n\n" "$( date )" "$*" >&2; }
 
-ssh_private_key_from_file() {
-    cp "$1" "/tmp/key"
-    chown "$(id -u)" "/tmp/key"
-    chmod 600 /tmp/key
-    SSH_COMMAND=$(printf "%s -i %q" "$SSH_COMMAND" "/tmp/key")
-}
+info "Starting backup"
 
-ssh_host_keys() {
-    echo "$1" > /tmp/known_hosts;
-    SSH_COMMAND="$(printf "%s -o %q" "$SSH_COMMAND" "UserKnownHostsFile=/tmp/known_hosts")"
-}
+echo "# borg create --stats --show-rc ${SYNC_OPTIONS:-} \"$TARGET\" \"$SOURCE\""
+borg create --verbose --list --stats --show-rc ${SYNC_OPTIONS:-} "$TARGET" "$SOURCE"
 
-ssh_host_keys_from_file() {
-    SSH_COMMAND="$(printf "%s -o %q" "$SSH_COMMAND" "UserKnownHostsFile=$SSH_KNOWN_HOSTS_FILE")"
-}
+info "Pruning repository"
 
-construct_ssh_command() {
-    if [ -n "${SSH_PRIVATE_KEY:-}" ]; then
-        ssh_private_key "$SSH_PRIVATE_KEY"
-    elif [ -f "${SSH_PRIVATE_KEY_FILE:-}" ]; then
-        ssh_private_key_from_file "$SSH_PRIVATE_KEY_FILE"
-    fi
-    if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
-        ssh_host_keys "$SSH_KNOWN_HOSTS"
-    elif [ -f "${SSH_KNOWN_HOSTS_FILE:-}" ]; then
-        ssh_host_keys_from_file "$SSH_KNOWN_HOSTS_FILE"
-    fi
-}
+HOURLY="${HOURLY:-24}"
+DAILY="${DAILY:-7}"
+WEEKLY="${WEEKLY:-4}"
+MONTHLY="${MONTHLY:-12}"
+YEARLY="${YEARLY:-2}"
 
-construct_ssh_command
+echo "# borg prune --list ${PRUNE_OPTIONS:-} --show-rc --keep-hourly \"$HOURLY\" --keep-daily \"$DAILY\" --keep-weekly \"$WEEKLY\" --keep-monthly \"$MONTHLY\" --keep-yearly \"$YEARLY\" \"$TARGET_NO_ARCHIVE\""
+borg prune --list ${PRUNE_OPTIONS:-} --show-rc --keep-hourly "$HOURLY" --keep-daily "$DAILY" --keep-weekly "$WEEKLY" --keep-monthly "$MONTHLY" --keep-yearly "$YEARLY" "$TARGET_NO_ARCHIVE"
 
-###########
-# EXECUTE #
-###########
-RSYNC_CMD='rsync ${RSYNC_OPTIONS:-} ${SSH_COMMAND:+-e "$SSH_COMMAND"} "$RSYNC_SOURCE" "$RSYNC_TARGET"'
-if [ "$#" == "0" ]; then
-    echo "$RSYNC_CMD"
-    eval "exec $RSYNC_CMD"
-else
-    exec "$@"
-fi
+info "Compacting respoitory"
 
+echo "# borg compact ${COMPACT_OPTIONS:-} \"$TARGET_NO_ARCHIVE\""
+borg compact ${COMPACT_OPTIONS:-} "$TARGET_NO_ARCHIVE"
+
+info "FINISH"

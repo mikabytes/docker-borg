@@ -1,13 +1,11 @@
 FROM alpine
 
-RUN apk add rsync bash openssh-client
+RUN apk add borgbackup bash openssh-client
+
+# create .ssh folder, limited to root access
+RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
 
 COPY entrypoint /entrypoint
 RUN chmod ug+x /entrypoint
 
-COPY test /test
-RUN chmod ug+rwX /test
-
-RUN chmod g+=rw /etc/passwd
-USER 1001
 ENTRYPOINT [ "/entrypoint" ]
