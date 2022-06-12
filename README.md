@@ -1,4 +1,4 @@
-# rsync
+# Borg
 
 A container for backing up stuff to a borgbackup repo, which may be local or remote (using SSH).
 
@@ -62,6 +62,6 @@ sudo docker run -it \
   -v /tmp/tmp/REPO:/REPO \
   -v /tmp/tmp/cache:/root/.cache/borg \
   -e SOURCE=/SOURCE \
-  -e TARGET=/REPO::test1
+  -e TARGET=/REPO::test-{now}
   mikabytes/docker-borg:latest
 ```
