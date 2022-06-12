@@ -10,7 +10,8 @@ export BORG_DELETE_I_KNOW_WHAT_I_AM_DOING=${BORG_DELETE_I_KNOW_WHAT_I_AM_DOING:-
 
 TARGET_NO_ARCHIVE=`echo "$TARGET" | sed 's/::.*$//'`
 
-whoami
+echo "# cd \"$SOURCE\""
+cd $SOURCE
 
 trap 'echo $( date ) Backup interrupted >&2; exit 2' INT TERM
 
@@ -24,8 +25,8 @@ info() { printf "\n=== %s %s ===\n\n" "$( date )" "$*" >&2; }
 
 info "Starting backup"
 
-echo "# borg create --stats --show-rc ${SYNC_OPTIONS:-} \"$TARGET\" \"$SOURCE\""
-borg create --verbose --list --stats --show-rc ${SYNC_OPTIONS:-} "$TARGET" "$SOURCE"
+echo "# borg create --stats --show-rc ${SYNC_OPTIONS:-} \"$TARGET\" ."
+borg create --verbose --list --stats --show-rc ${SYNC_OPTIONS:-} "$TARGET" .
 
 info "Pruning repository"
 

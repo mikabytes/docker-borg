@@ -1,6 +1,6 @@
 # Borg
 
-A container for backing up stuff to a borgbackup repo, which may be local or remote (using SSH).
+A container for backing up stuff to a Borg repo, which may be local or remote (using SSH).
 
 It will backup, prune, and compact the repo according to your specifications. Then it will quit. You need to set up your own scheduling, such as a local crontab or Kubernetes CronJob.
 
@@ -55,7 +55,7 @@ cd /tmp/tmp
 mkdir -p SOURCE REPO cache
 
 borg init --encryption repokey ./SOURCE
-# (press enter for empty passphrase, or specify a passphrase and add it to the SYNC_OPTIONS)
+# (press enter for empty passphrase, or specify a passphrase and set BORG_PASSPHRASE env variable)
 
 sudo docker run -it \
   -v /tmp/tmp/SOURCE:/SOURCE \
@@ -65,3 +65,7 @@ sudo docker run -it \
   -e TARGET=/REPO::test-{now}
   mikabytes/docker-borg:latest
 ```
+
+# Notes
+
+In the container world mount points is highly changeable. Borg uses a "root recursion" algorithm that makes this a bit problematic. For this reason, this script will "cd" into the source folder before running the backup. This effectively makes the source folder the root. Read more [here](https://borgbackup.readthedocs.io/en/stable/usage/help.html#borg-patterns)
