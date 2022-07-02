@@ -10,8 +10,23 @@ export BORG_DELETE_I_KNOW_WHAT_I_AM_DOING=${BORG_DELETE_I_KNOW_WHAT_I_AM_DOING:-
 
 TARGET_NO_ARCHIVE=`echo "$TARGET" | sed 's/::.*$//'`
 
-echo "# cd \"$SOURCE\""
-cd $SOURCE
+if [ -n $CEPH ]; then 
+  snap="$SOURCE/.snap/snap"
+  if [ -d "$snap" ]; then
+    echo "# rmdir \"$snap\""
+    rmdir "$snap"
+  fi
+
+  echo "# mkdir \"$snap\""
+  mkdir "$snap"
+
+  echo "# cd \"$snap\""
+  cd "$snap"
+else
+  echo "# cd \"$SOURCE\""
+  cd $SOURCE
+fi
+
 
 trap 'echo $( date ) Backup interrupted >&2; exit 2' INT TERM
 
@@ -43,5 +58,10 @@ info "Compacting respoitory"
 
 echo "# borg compact ${COMPACT_OPTIONS:-} \"$TARGET_NO_ARCHIVE\""
 borg compact ${COMPACT_OPTIONS:-} "$TARGET_NO_ARCHIVE"
+
+if [ -n $CEPH} ]; then 
+  echo "# rmdir \"$snap\""
+  rmdir "$snap"
+fi
 
 info "FINISH"

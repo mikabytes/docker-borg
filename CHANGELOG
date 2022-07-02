@@ -1,0 +1,7 @@
+# 1.1
+
+- Added support for CephFS snapshotting. This helps to avoid files being changed while backing up. Enable by setting "CEPH=1" env variable.
+
+# 1.0
+
+Initial public release

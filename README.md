@@ -1,6 +1,6 @@
 # Borg
 
-A container for backing up stuff to a Borg repo, which may be local or remote (using SSH).
+A container for backing up stuff to a Borg repo, which may be local or remote (using SSH). It can also handle CephFS snapshotting.
 
 It will backup, prune, and compact the repo according to your specifications. Then it will quit. You need to set up your own scheduling, such as a local crontab or Kubernetes CronJob.
 
@@ -28,6 +28,9 @@ DAILY=7
 WEEKLY=4
 MONTHLY=12
 YEARLY=2
+
+# this is off by default, setting to 1 will create the special CephFS ".snap/snap" folder in the source folder for use while backing up
+CEPH=1
 ```
 
 Also, you can specify any Borg environment variables, such as:
