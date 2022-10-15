@@ -1,3 +1,7 @@
+# 1.1.1
+
+- Bugfix: CEPH mode was always enabled due to missing quotes on variable "CEPH" env variable.
+
 # 1.1
 
 - Added support for CephFS snapshotting. This helps to avoid files being changed while backing up. Enable by setting "CEPH=1" env variable.
